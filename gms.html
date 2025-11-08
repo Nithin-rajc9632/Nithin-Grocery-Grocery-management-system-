@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nithin Grocery</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+            color: #2c3e50;
+        }
+        body.dark {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 850px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body.dark .container {
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+        body.dark input[type="text"],
+        body.dark input[type="number"],
+        body.dark select {
+            background-color: #333;
+            color: #eee;
+            border-color: #555;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+        .stock-warning {
+            background-color: #ffdddd;
+            color: #900;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body.dark th, body.dark td {
+            border-color: #555;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        body.dark th {
+            background-color: #2980b9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        body.dark tr:hover {
+            background-color: #333;
+        }
+        .actions button {
+            background-color: #e74c3c;
+            margin-right: 5px;
+        }
+        .actions button:hover {
+            background-color: #c0392b;
+        }
+        .actions .edit {
+            background-color: #f39c12;
+        }
+        .actions .edit:hover {
+            background-color: #d35400;
+        }
+        .unit-select {
+            margin-top: 5px;
+        }
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .flex-row label {
+            flex: 0 0 auto;
+        }
+        .flex-row input[type="number"] {
+            flex: 1 1 100px;
+        }
+        #summary {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        #toggleDarkMode {
+            float: right;
+            margin-top: -55px;
+            margin-bottom: 10px;
+            background-color: #666;
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.3s;
+        }
+        #toggleDarkMode:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Nithin Grocery</h1>
+        <div id="toggleDarkMode">Toggle Dark Mode</div>
+        <form id="groceryForm">
+            <div class="form-group">
+                <label for="itemName">Item Name</label>
+                <input type="text" id="itemName" required />
+            </div>
+            <div class="form-group">
+                <label for="quantity">Quantity</label>
+                <input type="number" id="quantity" required min="0.01" step="0.01" />
+                <select id="unit" class="unit-select" required>
+                    <option value="pcs">Pieces</option>
+                    <option value="kg">Kilogram</option>
+                    <option value="g">Gram</option>
+                    <option value="ltr">Liter</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="price">Price (per unit)</label>
+                <input type="number" id="price" step="0.01" min="0" required />
+            </div>
+            <div class="form-group">
+                <label for="minQty">Minimum Quantity Threshold for Stock Warning</label>
+                <input type="number" id="minQty" step="0.01" min="0" placeholder="e.g., 1" />
+                <small>Optional - leave blank if no warning needed</small>
+            </div>
+            <button type="submit">Add Item</button>
+            <button type="button" id="updateBtn" style="display: none;">Update Item</button>
+            <button type="button" id="cancelBtn" style="display: none;">Cancel</button>
+        </form>
+
+        <div class="flex-row" style="margin-top:25px; align-items:center;">
+            <label for="discount">Discount (%)</label>
+            <input type="number" id="discount" min="0" max="100" step="0.1" value="0" />
+            <label for="gst">GST (%)</label>
+            <input type="number" id="gst" min="0" max="100" step="0.1" value="0" />
+            <button id="printBillBtn">Print Bill</button>
+            <button id="saveDayBtn" title="Save current final total as today's sale">Save Day Total</button>
+            <button id="viewHistoryBtn" title="View & print daily sales history">View History</button>
+        </div>
+
+        <table id="groceryTable" aria-label="Grocery items list">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
+                    <th>Price (₹)</th>
+                    <th>Total (₹)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div id="summary"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('groceryForm');
+        const itemNameInput = document.getElementById('itemName');
+        const quantityInput = document.getElementById('quantity');
+        const priceInput = document.getElementById('price');
+        const unitSelect = document.getElementById('unit');
+        const minQtyInput = document.getElementById('minQty');
+        const updateBtn = document.getElementById('updateBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const tableBody = document.querySelector('#groceryTable tbody');
+        const printBillBtn = document.getElementById('printBillBtn');
+        const discountInput = document.getElementById('discount');
+        const gstInput = document.getElementById('gst');
+        const summaryDiv = document.getElementById('summary');
+        const toggleDarkModeBtn = document.getElementById('toggleDarkMode');
+        const saveDayBtn = document.getElementById('saveDayBtn');
+        const viewHistoryBtn = document.getElementById('viewHistoryBtn');
+
+        let groceries = JSON.parse(localStorage.getItem('groceries')) || [];
+        let editIndex = null;
+        let salesHistory = JSON.parse(localStorage.getItem('salesHistory')) || [];
+
+        const inrFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+
+        function getUnitLabel(unit) {
+            switch (unit) {
+                case 'kg': return 'kg';
+                case 'g': return 'g';
+                case 'ltr': return 'ltr';
+                case 'pcs': return 'pcs';
+                default: return '';
+            }
+        }
+
+        function renderTable() {
+            tableBody.innerHTML = '';
+            groceries.forEach((item, index) => {
+                const total = item.quantity * item.price;
+                const quantityWithUnit = `${item.quantity} ${getUnitLabel(item.unit)}`;
+                let row = document.createElement('tr');
+
+                let stockWarn = false;
+                if (item.minQty !== undefined && item.minQty !== null && item.minQty !== '' && !isNaN(item.minQty)) {
+                    stockWarn = item.quantity < parseFloat(item.minQty);
+                    if (stockWarn) {
+                        row.classList.add('stock-warning');
+                    }
+                }
+
+                row.innerHTML = `
+                    <td>${item.name}${stockWarn ? ' ⚠️' : ''}</td>
+                    <td>${quantityWithUnit}</td>
+                    <td>${inrFormatter.format(item.price)}</td>
+                    <td>${inrFormatter.format(total)}</td>
+                    <td class="actions">
+                        <button class="edit" onclick="editItem(${index})">Edit</button>
+                        <button onclick="deleteItem(${index})">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            updateSummary();
+        }
+
+        function updateSummary() {
+            let subtotal = groceries.reduce((sum, item) => sum + item.quantity * item.price, 0);
+            let discountPercent = parseFloat(discountInput.value) || 0;
+            let gstPercent = parseFloat(gstInput.value) || 0;
+            let discountAmount = subtotal * (discountPercent / 100);
+            let taxableAmount = subtotal - discountAmount;
+            let gstAmount = taxableAmount * (gstPercent / 100);
+            let finalTotal = taxableAmount + gstAmount;
+
+            summaryDiv.innerHTML = `
+                Subtotal: ${inrFormatter.format(subtotal)}<br />
+                Discount (${discountPercent.toFixed(1)}%): -${inrFormatter.format(discountAmount)}<br />
+                GST (${gstPercent.toFixed(1)}%): +${inrFormatter.format(gstAmount)}<br />
+                <strong>Final Total Payable: ${inrFormatter.format(finalTotal)}</strong>
+            `;
+            return finalTotal;
+        }
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            if (editIndex !== null) return;
+
+            const minQtyValue = minQtyInput.value.trim();
+            const minQty = minQtyValue !== '' ? parseFloat(minQtyValue) : null;
+
+            const newItem = {
+                name: itemNameInput.value.trim(),
+                quantity: parseFloat(quantityInput.value),
+                unit: unitSelect.value,
+                price: parseFloat(priceInput.value),
+                minQty: minQty
+            };
+
+            if (newItem.quantity <= 0 || newItem.price < 0) {
+                alert('Please enter valid quantity and price.');
+                return;
+            }
+            if (minQty !== null && (isNaN(minQty) || minQty < 0)) {
+                alert('Please enter a valid minimum quantity threshold.');
+                return;
+            }
+
+            groceries.push(newItem);
+            saveToStorage();
+            renderTable();
+            form.reset();
+            unitSelect.value = 'pcs';
+            minQtyInput.value = '';
+        });
+
+        function editItem(index) {
+            const item = groceries[index];
+            itemNameInput.value = item.name;
+            quantityInput.value = item.quantity;
+            unitSelect.value = item.unit;
+            priceInput.value = item.price;
+            minQtyInput.value = item.minQty !== undefined && item.minQty !== null ? item.minQty : '';
+            editIndex = index;
+            updateBtn.style.display = 'inline-block';
+            cancelBtn.style.display = 'inline-block';
+            form.querySelector('button[type="submit"]').style.display = 'none';
+        }
+
+        updateBtn.addEventListener('click', () => {
+            if (editIndex !== null) {
+                const minQtyValue = minQtyInput.value.trim();
+                const minQty = minQtyValue !== '' ? parseFloat(minQtyValue) : null;
+
+                const updatedItem = {
+                    name: itemNameInput.value.trim(),
+                    quantity: parseFloat(quantityInput.value),
+                    unit: unitSelect.value,
+                    price: parseFloat(priceInput.value),
+                    minQty: minQty
+                };
+
+                if (updatedItem.quantity <= 0 || updatedItem.price < 0) {
+                    alert('Please enter valid quantity and price.');
+                    return;
+                }
+                if (minQty !== null && (isNaN(minQty) || minQty < 0)) {
+                    alert('Please enter a valid minimum quantity threshold.');
+                    return;
+                }
+
+                groceries[editIndex] = updatedItem;
+                saveToStorage();
+                renderTable();
+                form.reset();
+                unitSelect.value = 'pcs';
+                minQtyInput.value = '';
+                editIndex = null;
+                updateBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
+                form.querySelector('button[type="submit"]').style.display = 'inline-block';
+            }
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            form.reset();
+            unitSelect.value = 'pcs';
+            minQtyInput.value = '';
+            editIndex = null;
+            updateBtn.style.display = 'none';
+            cancelBtn.style.display = 'none';
+            form.querySelector('button[type="submit"]').style.display = 'inline-block';
+        });
+
+        function deleteItem(index) {
+            groceries.splice(index, 1);
+            saveToStorage();
+            renderTable();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('groceries', JSON.stringify(groceries));
+        }
+
+        discountInput.addEventListener('input', updateSummary);
+        gstInput.addEventListener('input', updateSummary);
+
+        printBillBtn.addEventListener('click', () => {
+            if (groceries.length === 0) {
+                alert('No items to print.');
+                return;
+            }
+            printBill();
+        });
+
+        function printBill() {
+            let discountPercent = parseFloat(discountInput.value) || 0;
+            let gstPercent = parseFloat(gstInput.value) || 0;
+
+            let billWindow = window.open('', 'Print Bill', 'width=700,height=600');
+            let billContent = `
+                <html>
+                <head>
+                    <title>Grocery Bill</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        h2 { text-align: center; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+                        th { background-color: #f2f2f2; }
+                        tfoot td { font-weight: bold; }
+                    </style>
+                </head>
+                <body>
+                    <h2>Grocery Bill</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Quantity</th>
+                                <th>Price (₹)</th>
+                                <th>Total (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            let subtotal = 0;
+            groceries.forEach(item => {
+                let total = item.quantity * item.price;
+                subtotal += total;
+                billContent += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.quantity} ${getUnitLabel(item.unit)}</td>
+                        <td>${inrFormatter.format(item.price)}</td>
+                        <td>${inrFormatter.format(total)}</td>
+                    </tr>
+                `;
+            });
+
+            let discountAmount = subtotal * (discountPercent / 100);
+            let taxableAmount = subtotal - discountAmount;
+            let gstAmount = taxableAmount * (gstPercent / 100);
+            let finalTotal = taxableAmount + gstAmount;
+
+            billContent += `
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" style="text-align:right;">Subtotal</td>
+                                <td>${inrFormatter.format(subtotal)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" style="text-align:right;">Discount (${discountPercent.toFixed(1)}%)</td>
+                                <td>-${inrFormatter.format(discountAmount)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" style="text-align:right;">GST (${gstPercent.toFixed(1)}%)</td>
+                                <td>${inrFormatter.format(gstAmount)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" style="text-align:right;">Final Total</td>
+                                <td>${inrFormatter.format(finalTotal)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <p style="text-align:center; margin-top:20px;">Thank you for shopping with us!</p>
+                </body>
+                </html>
+            `;
+
+            billWindow.document.write(billContent);
+            billWindow.document.close();
+            billWindow.focus();
+            billWindow.print();
+
+            // Save this bill (print) to salesHistory immediately after printing
+            saveBillToHistory(finalTotal);
+        }
+
+        function saveBillToHistory(amount) {
+            const now = new Date();
+            salesHistory.push({
+                date: now.toLocaleDateString(),
+                time: now.toLocaleTimeString(),
+                day: now.toLocaleDateString(undefined, { weekday: 'long' }),
+                year: now.getFullYear(),
+                total: amount
+            });
+            localStorage.setItem('salesHistory', JSON.stringify(salesHistory));
+
+            alert('This bill\'s total amount has been saved to Daily History.');
+        }
+
+        saveDayBtn.addEventListener('click', () => {
+            const finalTotal = updateSummary();
+            if (finalTotal <= 0) {
+                alert('Final total is zero or negative, nothing to save.');
+                return;
+            }
+            saveBillToHistory(finalTotal);
+
+            groceries = [];
+            saveToStorage();
+            renderTable();
+            form.reset();
+            unitSelect.value = 'pcs';
+            minQtyInput.value = '';
+            discountInput.value = "0";
+            gstInput.value = "0";
+        });
+
+        viewHistoryBtn.addEventListener('click', () => {
+            if (salesHistory.length === 0) {
+                alert('No sales history found.');
+                return;
+            }
+
+            const today = new Date().toLocaleDateString();
+
+            // Filter to keep entries for today only
+            const todaySales = salesHistory.filter(e => e.date === today);
+
+            let totalProfit = todaySales.reduce((sum, e) => sum + e.total, 0);
+
+            let historyWindow = window.open('', 'Sales History', 'width=900,height=600');
+            let content = `
+                <html>
+                <head>
+                    <title>Today's Sales History</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        h2 { text-align: center; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+                        th { background-color: #f2f2f2; }
+                        tfoot td { font-weight: bold; }
+                        button {
+                            background-color: #3498db;
+                            color: white;
+                            border: none;
+                            padding: 8px 12px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            margin-top: 10px;
+                        }
+                        button:hover {
+                            background-color: #2980b9;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h2>Today's Sales History (${today})</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Day</th>
+                                <th>Year</th>
+                                <th>Total Amount (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            todaySales.forEach(entry => {
+                content += `<tr>
+                    <td>${entry.date}</td>
+                    <td>${entry.time}</td>
+                    <td>${entry.day}</td>
+                    <td>${entry.year}</td>
+                    <td>${inrFormatter.format(entry.total)}</td>
+                </tr>`;
+            });
+
+            content += `
+                        </tbody>
+                        <tfoot>
+                            <tr><td colspan="4" style="text-align:right;">Today's Total</td><td>${inrFormatter.format(totalProfit)}</td></tr>
+                        </tfoot>
+                    </table>
+                    <button id="printHistoryBtn">Print Today's History</button>
+                    <script>
+                        document.getElementById('printHistoryBtn').addEventListener('click', () => {
+                            window.print();
+                        });
+                    <\/script>
+                </body>
+                </html>
+            `;
+
+            historyWindow.document.write(content);
+            historyWindow.document.close();
+            historyWindow.focus();
+
+            // After opening view, clear entries older than today (keep today's entries)
+            salesHistory = todaySales;
+            localStorage.setItem('salesHistory', JSON.stringify(salesHistory));
+        });
+
+        toggleDarkModeBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark') ? 'true' : 'false');
+        });
+
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark');
+        }
+
+        renderTable();
+    </script>
+</body>
+</html>
